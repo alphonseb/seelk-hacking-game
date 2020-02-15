@@ -33,7 +33,7 @@ function App () {
 
     return (
         <div className="App">
-            <h1>Cryto Alert</h1>
+            <h1>Crypto Alert</h1>
             <h2>Easily set up alerts about your favorite cryto-currencies movement</h2>
             <AlertsForm />
             <AlertsList />

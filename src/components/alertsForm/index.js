@@ -60,14 +60,11 @@ function AlertsForm ({ alert }) {
                 console.log(condition(), newAlert.emailSent);
                 if (condition() && !newAlert.emailSent) {
                     // send email
-                    const message = `
-                        <p>${ newAlert.assetName } just passed the threshold of ${ newAlert.limit } you set up !</p>
-                        <p>It is now at ${ data.rate }$ !</p>
-                    `;
                     const templateParams = {
-                        currency_name: selectedAsset.name,
-                        to_email: newAlert.email,
-                        message_html: message
+                        currency_name: newAlert.assetName,
+                        threshold: newAlert.limit,
+                        rate: data.rate,
+                        to_email: newAlert.email
                     };
                     emailjs
                         .send(process.env.REACT_APP_EMAILJS_SERVICEID, process.env.REACT_APP_EMAILJS_TEMPLATEID, templateParams, process.env.REACT_APP_EMAILJS_USERID)
