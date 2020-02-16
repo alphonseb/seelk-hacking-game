@@ -4,6 +4,7 @@ import uuid from 'uuid/v1';
 import emailjs from 'emailjs-com';
 import { useSelector, useDispatch } from 'react-redux';
 import { addAlert, editAlert, deleteAlert } from '../../store/actions';
+import { Input, Button, Select, Form, AssetList } from './form';
 
 function AlertsForm ({ alert }) {
     const dispatch = useDispatch();
@@ -19,6 +20,7 @@ function AlertsForm ({ alert }) {
     const [newAlertEmail, setNewAlertEmail] = useState('');
 
     const [readOnly, setReadOnly] = useState(alert ? true : false);
+    const [formError, setFormError] = useState(false);
     
     useEffect(() => {
         if (alert) {
@@ -31,69 +33,73 @@ function AlertsForm ({ alert }) {
     }, []);// eslint-disable-line react-hooks/exhaustive-deps
 
     const saveAlert = () => {
-        const newAlert = {};
-        newAlert.id = (alert && alert.id) || uuid();
-        newAlert.email = newAlertEmail;
-        newAlert.assetId = selectedAsset.id;
-        newAlert.assetName = selectedAsset.name;
-        newAlert.emailSent = false;
-        newAlert.condition = selectedCondition;
-        newAlert.limit = selectedLimit;
-        newAlert.interval = window.setInterval(() => {
-            axios({
-                method: 'get',
-                url: `${ process.env.REACT_APP_COINAPI_BASE_URL }/exchangerate/${ selectedAsset.id }/USD`,
-                headers: {
-                    'X-CoinAPI-Key': process.env.REACT_APP_API_KEY
-                }
-            }).then(({ data }) => {
-                const condition = () => {
-                    switch (selectedCondition) {
-                        case 'inferior':
-                            return data.rate < selectedLimit;
-                        case 'superior':
-                            return data.rate > selectedLimit;
-                        default:
-                            return false;
-                    }
-                }
-                console.log(condition(), newAlert.emailSent);
-                if (condition() && !newAlert.emailSent) {
-                    // send email
-                    const templateParams = {
-                        currency_name: newAlert.assetName,
-                        threshold: newAlert.limit,
-                        rate: data.rate,
-                        to_email: newAlert.email
-                    };
-                    emailjs
-                        .send(process.env.REACT_APP_EMAILJS_SERVICEID, process.env.REACT_APP_EMAILJS_TEMPLATEID, templateParams, process.env.REACT_APP_EMAILJS_USERID)
-                        .then(res => console.log(res));
-                    console.log('email sent to :', newAlert.email);
-                    newAlert.emailSent = true;
-                    clearInterval(newAlert.interval);
-                    dispatch(editAlert(newAlert));
-                }
-            }).catch((err) => {
-                console.error(err);
-                window.alert('Unfortunately we are currently not supporting this crypto currency. Try an other one !');
-                clearInterval(newAlert.interval);
-            })
-            
-        }, 1000 * 60);
-        if (alert) {
-            console.log(alert, newAlert);
-            dispatch(editAlert(newAlert));
-            setReadOnly(true);
+        if (!newAlertEmail || !selectedAsset.id || !selectedCondition || !selectedLimit) {
+            setFormError(true);
         } else {
-            dispatch(addAlert(newAlert));
-            setnewAlertText('');
-            setSelectedAsset({});
-            setSelectedCondition('');
-            setSelectedLimit(0);
-            setNewAlertEmail('');
+            setFormError(false);
+            const newAlert = {};
+            newAlert.id = (alert && alert.id) || uuid();
+            newAlert.email = newAlertEmail;
+            newAlert.assetId = selectedAsset.id;
+            newAlert.assetName = selectedAsset.name;
+            newAlert.emailSent = false;
+            newAlert.condition = selectedCondition;
+            newAlert.limit = selectedLimit;
+            newAlert.interval = window.setInterval(() => {
+                axios({
+                    method: 'get',
+                    url: `${ process.env.REACT_APP_COINAPI_BASE_URL }/exchangerate/${ selectedAsset.id }/USD`,
+                    headers: {
+                        'X-CoinAPI-Key': process.env.REACT_APP_API_KEY
+                    }
+                }).then(({ data }) => {
+                    const condition = () => {
+                        switch (selectedCondition) {
+                            case 'inferior':
+                                return data.rate < selectedLimit;
+                            case 'superior':
+                                return data.rate > selectedLimit;
+                            default:
+                                return false;
+                        }
+                    }
+                    if (condition() && !newAlert.emailSent) {
+                        // send email
+                        const templateParams = {
+                            currency_name: newAlert.assetName,
+                            threshold: newAlert.limit,
+                            rate: data.rate,
+                            to_email: newAlert.email
+                        };
+                        emailjs
+                            .send(process.env.REACT_APP_EMAILJS_SERVICEID, process.env.REACT_APP_EMAILJS_TEMPLATEID, templateParams, process.env.REACT_APP_EMAILJS_USERID)
+                            .then(res => console.log(res));
+                        console.log('email sent to :', newAlert.email);
+                        newAlert.emailSent = true;
+                        clearInterval(newAlert.interval);
+                        dispatch(editAlert(newAlert));
+                    }
+                }).catch((err) => {
+                    console.error(err);
+                    window.alert('Unfortunately we are currently not supporting this crypto currency. Try an other one !');
+                    clearInterval(newAlert.interval);
+                })
+                
+            }, 1000 * 60);
+            if (alert) {
+                console.log(alert, newAlert);
+                dispatch(editAlert(newAlert));
+                setReadOnly(true);
+            } else {
+                dispatch(addAlert(newAlert));
+                setnewAlertText('');
+                setSelectedAsset({});
+                setSelectedCondition('');
+                setSelectedLimit(0);
+                setNewAlertEmail('');
+            }
+            getRate(newAlert);
         }
-        getRate(newAlert);
     }
     
     const removeAlert = () => {
@@ -160,39 +166,40 @@ function AlertsForm ({ alert }) {
     return (
         <div>
             <h3>Add an alert</h3>
-            <form action="#" onSubmit={ (e) => { e.preventDefault() } }>
-                <input readOnly={ readOnly } placeholder="btc, ethereum..." type="text" value={ newAlertText } onChange={ handleNewAlertTextChange } />
-                <select disabled={ readOnly } value={ selectedCondition } name="condition" onChange={ handleConditionChange }>
+            <Form action="#" onSubmit={ (e) => { e.preventDefault() } }>
+                <Input readOnly={ readOnly } placeholder="btc, ethereum..." type="text" value={ newAlertText } onChange={ handleNewAlertTextChange } />
+                <Select disabled={ readOnly } value={ selectedCondition } name="condition" onChange={ handleConditionChange }>
                     <option value="">Choose</option>
                     <option value="inferior">&#60;</option>
                     <option value="superior">&#62;</option>
-                </select>
-                <input readOnly={ readOnly } type="number" name="limit" value={ selectedLimit } onChange={ handleLimitChange } />
-                <input readOnly={ readOnly } type="email" name="email" value={ newAlertEmail } onChange={ handleEmailChange } />
+                </Select>
+                <Input readOnly={ readOnly } type="number" name="limit" value={ selectedLimit } onChange={ handleLimitChange } />
+                <Input readOnly={ readOnly } type="email" name="email" value={ newAlertEmail } onChange={ handleEmailChange } placeholder="mail@example.com" />
                 {
                     (alert && readOnly) ?
-                        <button onClick={ () => { setReadOnly(false)} }>Edit alert</button>
+                        <Button onClick={ () => { setReadOnly(false)} }>Edit alert</Button>
                     : 
-                        <button onClick={ saveAlert }>Save alert</button>
+                        <Button onClick={ saveAlert }>Save alert</Button>
                 }
                 {
-                    alert && <button onClick={ removeAlert }>Remove alert</button>
+                    alert && <Button className="delete" onClick={ removeAlert }>Remove alert</Button>
                 }
                 {
                     (alert && alert.emailSent) && <p>Email sent !</p>
                 }
-            </form>
-            <ul>
-                {
-                    proposedAssets.map(({ id, name }) => (
-                        <li key={ id }>
-                            <button data-asset-id={ id } onClick={ handleAssetClick }>
-                                { id } - { name }
-                            </button>
-                        </li>
-                    ))
-                }
-            </ul>
+                { formError && <p className="error">Please fill all of the fields.</p> }
+                <AssetList>
+                    {
+                        proposedAssets.map(({ id, name }) => (
+                            <li key={ id }>
+                                <button data-asset-id={ id } onClick={ handleAssetClick }>
+                                    { id } - { name }
+                                </button>
+                            </li>
+                        ))
+                    }
+                </AssetList>
+            </Form>
         </div>
     );
 }

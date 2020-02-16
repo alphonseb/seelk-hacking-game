@@ -24,11 +24,13 @@ function App () {
                 }
             })
             dispatch(setAssets(newAssets));
+        }).catch(() => {
+            window.alert("Sorry it seems like either CoinAPI is not available right now or the limit of requests has been reached. Please try again later.");
         })
     }, []);// eslint-disable-line react-hooks/exhaustive-deps
     
     useEffect(() => {
-        window.alert('This is a client-only app. You will need to keep the app running in your browser if you want to receive any notification.')
+        // window.alert('This is a client-only app. You will need to keep the app running in your browser if you want to receive any notification.')
     }, [])// eslint-disable-line react-hooks/exhaustive-deps
 
     return (
